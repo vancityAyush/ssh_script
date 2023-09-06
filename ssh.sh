@@ -72,17 +72,8 @@ copy_to_clipboard_linux() {
 copy_to_clipboard_windows() {
   echo -n "$1" | clip.exe
 }
-OS="$(uname)"
-  public_key=$(cat "$keyName.pub")
-  if [ "$OS" = "Linux" ]; then
-  copy_to_clipboard_linux "$public_key"
-  echo "SSH public key copied to clipboard"
-elif [ "$OS" = "Windows_NT" ]; then
-  copy_to_clipboard_windows "$public_key"
-  echo "SSH public key copied to clipboard"
-else
-  echo "Clipboard copying is not supported on this operating system."
-fi
+
+cat "$keyName.pub"
 
 
 while true; do
