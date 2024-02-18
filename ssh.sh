@@ -65,15 +65,40 @@ fi
 writeConfig $hostName $keyName
 
 # Step 8: Copy the keyName.pub file to the clipboard and echo it
-copy_to_clipboard_linux() {
-  echo -n "$1" | xclip -selection clipboard
+copy_to_clipboard() {
+  if command -v xclip &> /dev/null; then  # Check for xclip (Linux)
+    xclip -selection clipboard < "$1"
+  elif command -v clip.exe &> /dev/null; then  # Check for clip.exe (Windows)
+    clip.exe < "$1"
+  else
+    echo "Warning: Neither xclip (Linux) nor clip.exe (Windows) found. Cannot copy to clipboard."
+  fi
 }
 
-copy_to_clipboard_windows() {
-  echo -n "$1" | clip.exe
-}
-
+copy_to_clipboard "$keyName.pub"
+echo "SSH Public Key copied to clipboard:"
 cat "$keyName.pub"
+
+# Step 9: Open GitHub SSH Key Settings in the browser
+open_settings_page() {
+  if [ "$1" = "1" ]; then  # Bitbucket
+    settings_url="https://bitbucket.org/account/settings/ssh-keys/"
+  elif [ "$1" = "2" ]; then  # GitHub
+    settings_url="https://github.com/settings/keys"
+  fi
+
+  if command -v xdg-open &> /dev/null; then   # Linux 
+    xdg-open "$settings_url"
+  elif command -v open &> /dev/null; then     # macOS
+    open "$settings_url"
+  elif command -v start &> /dev/null; then   # Windows
+    start "$settings_url"
+  else
+    echo "Could not detect a command to open URLs in the browser."
+  fi
+}
+
+open_settings_page "$option"
 
 
 while true; do
