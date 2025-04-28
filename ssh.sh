@@ -29,6 +29,11 @@ ssh-add "$keyName"
 config_file="config"
 touch "$config_file"
 
+if [ ! -w "$config_file" ]; then
+  echo "Error: Config file does not exist or is not writable."
+  exit 1
+fi
+
 getDefaultHostName() {
   if [ "$option" = "1" ]; then
     echo "bitbucket.org"
@@ -45,18 +50,18 @@ writeConfig(){
     echo "  HostName $(getDefaultHostName)" >> "$config_file"
     echo "  AddKeysToAgent yes" >> "$config_file"
     echo "  IdentityFile ~/.ssh/$2" >> "$config_file"
-    else
-     echo "Host already exists!!!"
-     exit 1
+  else
+    echo "Host already exists!!!"
+    exit 1
   fi
 }
 
 read -p "Do you want to add custom host name? (Y/N): " choiceHost
 
 if [[ "$choiceHost" == [Yy] ]]; then
-    read -p "Enter your host name like (work.github.com): " hostName
-  else
-    hostName=$(getDefaultHostName) 
+  read -p "Enter your host name like (work.github.com): " hostName
+else
+  hostName=$(getDefaultHostName)
 fi
 
 writeConfig $hostName $keyName
@@ -107,3 +112,10 @@ while true; do
     break
   fi
 done
+
+# Add a section to download the script using curl and run it locally
+if [ "$1" == "curl" ]; then
+  curl -O https://raw.githubusercontent.com/vancityAyush/ssh_script/main/ssh.sh
+  chmod +x ssh.sh
+  ./ssh.sh
+fi
