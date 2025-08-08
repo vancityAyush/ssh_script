@@ -46,7 +46,7 @@ getDefaultHostName() {
 
 writeConfig(){
   if ! grep -q "Host $1" "$config_file"; then
-    echo -e "\nHost $1" >> "$config_file"
+    echo "\nHost $1" >> "$config_file"
     echo "  HostName $(getDefaultHostName)" >> "$config_file"
     echo "  AddKeysToAgent yes" >> "$config_file"
     echo "  IdentityFile ~/.ssh/$2" >> "$config_file"
