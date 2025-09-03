@@ -5,19 +5,24 @@ set -e
 
 # Function to detect operating system
 detect_os() {
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        if grep -q Microsoft /proc/version 2>/dev/null; then
-            echo "wsl"
-        else
-            echo "linux"
-        fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        echo "macos"
-    elif [[ "$OSTYPE" == "cygwin" ]] || [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
-        echo "windows"
-    else
-        echo "unknown"
-    fi
+    case "$OSTYPE" in
+        linux-gnu*)
+            if grep -q Microsoft /proc/version 2>/dev/null; then
+                echo "wsl"
+            else
+                echo "linux"
+            fi
+            ;;
+        darwin*)
+            echo "macos"
+            ;;
+        cygwin|msys|win32)
+            echo "windows"
+            ;;
+        *)
+            echo "unknown"
+            ;;
+    esac
 }
 
 # Navigate to SSH directory with error handling
@@ -33,26 +38,44 @@ while true; do
     echo "3. GitLab"
     read -r -p "Enter your choice (1-3): " option
     
-    if [[ "$option" =~ ^[1-3]$ ]]; then
-        break
-    else
-        echo "Error: Please enter a valid option (1, 2, or 3)"
-    fi
+    case "$option" in
+        1|2|3)
+            break
+            ;;
+        *)
+            echo "Error: Please enter a valid option (1, 2, or 3)"
+            ;;
+    esac
 done
 
 while true; do
     read -r -p "Enter your email: " email
-    if [[ "$email" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
-        break
-    else
-        echo "Error: Please enter a valid email address"
-    fi
+    # Basic email validation - check for @ symbol and dot
+    case "$email" in
+        *@*.*) 
+            # Additional check to ensure it's not just @.
+            if [ "${email}" != "@." ] && [ -n "${email%%@*}" ] && [ -n "${email##*@}" ]; then
+                break
+            else
+                echo "Error: Please enter a valid email address"
+            fi
+            ;;
+        *)
+            echo "Error: Please enter a valid email address"
+            ;;
+    esac
 done
 
 while true; do
     read -r -p "Enter your SSH key name: " keyName
-    if [[ -n "$keyName" && ! "$keyName" =~ [[:space:]] ]]; then
-        break
+    if [ -n "$keyName" ]; then
+        # Check for spaces by comparing with version that has spaces removed
+        keyName_no_spaces=$(echo "$keyName" | tr -d ' ')
+        if [ "$keyName" = "$keyName_no_spaces" ]; then
+            break
+        else
+            echo "Error: Key name cannot be empty or contain spaces"
+        fi
     else
         echo "Error: Key name cannot be empty or contain spaces"
     fi
@@ -83,7 +106,7 @@ echo "SSH key generated successfully!"
 echo "Starting SSH agent and adding key..."
 OS=$(detect_os)
 
-if [[ "$OS" == "windows" ]]; then
+if [ "$OS" = "windows" ]; then
     # Windows/Git Bash handling
     if ! pgrep -x "ssh-agent" > /dev/null; then
         eval "$(ssh-agent -s)"
@@ -136,18 +159,27 @@ writeConfig() {
 # Get hostname configuration
 read -r -p "Do you want to add custom host name? (Y/N): " choiceHost
 
-if [[ "$choiceHost" =~ ^[Yy]$ ]]; then
-    while true; do
-        read -r -p "Enter your host name (e.g., work.github.com): " hostName
-        if [[ -n "$hostName" && ! "$hostName" =~ [[:space:]] ]]; then
-            break
-        else
-            echo "Error: Host name cannot be empty or contain spaces"
-        fi
-    done
-else
-    hostName=$(getDefaultHostName)
-fi
+case "$choiceHost" in
+    [Yy]|[Yy][Ee][Ss])
+        while true; do
+            read -r -p "Enter your host name (e.g., work.github.com): " hostName
+            if [ -n "$hostName" ]; then
+                # Check for spaces by comparing with version that has spaces removed
+                hostName_no_spaces=$(echo "$hostName" | tr -d ' ')
+                if [ "$hostName" = "$hostName_no_spaces" ]; then
+                    break
+                else
+                    echo "Error: Host name cannot be empty or contain spaces"
+                fi
+            else
+                echo "Error: Host name cannot be empty or contain spaces"
+            fi
+        done
+        ;;
+    *)
+        hostName=$(getDefaultHostName)
+        ;;
+esac
 
 writeConfig "$hostName" "$keyName"
 
@@ -257,21 +289,24 @@ while true; do
     read -r -p "Press T to test SSH key, or any other key to exit: " choice
     echo ""
     
-    if [[ "$choice" =~ ^[Tt]$ ]]; then
-        echo "Testing SSH connection to git@$hostName..."
-        if ssh -T "git@$hostName"; then
-            echo "✓ SSH connection successful!"
-        else
-            case $? in
-                1) echo "✓ SSH key is working! (Exit code 1 is normal for Git SSH test)" ;;
-                255) echo "✗ SSH connection failed. Please check your SSH key setup." ;;
-                *) echo "⚠ SSH test completed with exit code $?" ;;
-            esac
-        fi
-    else
-        echo "Exiting script. SSH setup complete!"
-        break
-    fi
+    case "$choice" in
+        [Tt]|[Tt][Ee][Ss][Tt])
+            echo "Testing SSH connection to git@$hostName..."
+            if ssh -T "git@$hostName"; then
+                echo "✓ SSH connection successful!"
+            else
+                case $? in
+                    1) echo "✓ SSH key is working! (Exit code 1 is normal for Git SSH test)" ;;
+                    255) echo "✗ SSH connection failed. Please check your SSH key setup." ;;
+                    *) echo "⚠ SSH test completed with exit code $?" ;;
+                esac
+            fi
+            ;;
+        *)
+            echo "Exiting script. SSH setup complete!"
+            break
+            ;;
+    esac
     echo ""
 done
 
